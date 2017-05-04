@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+
+    <head>
+        <title>Over Here!</title>
+        <link th:href="@{/css/bootstrap.min.css}" rel="stylesheet"/>
+        <link th:href="@{css/shop-homepage.css}" rel="stylesheet"/>
+        <!-- jQuery -->
+        <script th:src="@{js/jquery.js}"></script>
+        <!-- Bootstrap Core JavaScript -->
+        <script th:src="@{js/bootstrap.min.js}"></script>
+
+    </head>
+
+    <body th:object="${user}" style="background-color: #C9DEED;">
+
+        <!-- Navigation -->
+        <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+            <div class="container">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse"
+                            data-target="#bs-example-navbar-collapse-1">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="#">Over Here</a>
+                    
+                </div>
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                    <ul class="nav navbar-nav">
+                        <li>
+                            <img src="https://s3-eu-west-1.amazonaws.com/overherestorage/ic_launcher.png"
+                            style="margin:1%;" height="8%" width="8%"/>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Sign In Form-->
+        <div class="container">
+            <form class="form-signin" role="form" th:action="@{/user}"
+                  xmlns:th="http://www.w3.org/1999/xhtml" method="post">
+                <div class="col-md-5 col-md-offset-4" >
+                    <h2 class="form-signin-heading">Please sign in</h2>
+                    <label for="inputEmail" class="sr-only">Name</label>
+                    <input name="username" type="text" id="inputUsername" th:value="${user.username}" class="form-control" placeholder="Username" required="required" autofocus="autofocus" />
+                    <br/>
+                    <label for="inputPassword" class="sr-only">Password</label>
+                    <input name="password" type="password" id="inputPassword" th:value="${user.password}" class="form-control" placeholder="Password" required="required" />
+                    <hr/>
+                    <button class="btn btn-lg btn-primary btn-block" type="submit" value="User">Sign in</button>
+                    <div th:object="${error}" th:if="${error != null}">
+                        <div class="alert alert-danger">
+                            <strong>Authentication Failed. Please try again</strong>
+                        </div>
+                    </div>
+                        
+                </div>
+            </form>
+        </div>
+        <br/>
+        <!-- Footer -->
+        <div class="container">
+            <footer class="text-center">
+              <div class="footer-above">
+                <div class="container">
+                  <div class="row">
+                    <div class="footer-col col-md-4">
+                      <h3></h3>
+                    </div>
+                    <div class="footer-col col-md-4">
+                      <h3>Over Here Patient Montioring System</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="footer-below">
+                <div class="container">
+                  <div class="row">
+                    <div class="col-lg-12">
+                      Copyright &copy; Over Here! 2016
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </footer>
+        </div>
+    </body>
+</html>

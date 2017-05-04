@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Over Here</title>
+
+    <style>
+      #map {
+        height: 100%;
+      }
+    </style>
+
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet" type="text/css"/>
+    <link href="https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic" rel="stylesheet" type="text/css"/>       
+    <!-- jQuery -->
+    <script th:src="@{js/jquery.js}"></script>
+    <!-- Bootstrap Core JavaScript -->
+    <script th:src="@{js/bootstrap.min.js}"></script>
+    <!-- Bootstrap Core CSS -->
+    <link th:href="@{/css/bootstrap.min.css}" rel="stylesheet"/>
+    <link th:href="@{/css/font-awesome.min.css}" rel="stylesheet"/>
+    <!-- Custom CSS -->
+    <link th:href="@{css/shop-homepage.css}" rel="stylesheet"/>
+    <script src="https://code.highcharts.com/highcharts.src.js"></script>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <!-- Plugin JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.3/jquery.easing.min.js"></script>
+    <script th:inline="javascript" async="true" defer="true"
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCYHZ6-eOwasYp0Y2IIMTcXwE2F-etjRLg&amp;callback=initMap">
+    </script>
+
+    <script th:inline="javascript">
+
+      /*<![CDATA[*/
+      var gpsRoute = [];
+
+      //console.log([[${patient.homeAddress}]]);
+      gpsRoute[0] = {lat:[[${patient.homeAddress.latitude}]],lng:[[${patient.homeAddress.longitude}]]};
+      var XChart = {};
+      var YChart = {};
+      var ZChart = {};
+      var AccelChart = {};
+      var poly;
+      var eventMap;
+      var eventGraph;
+
+      $(document).ready(function()
+      {
+
+        $.support.cors = true;
+        var url = 'https://guarded-falls-61506.herokuapp.com/findall?userid=' + [[${patient.user_id}]] + ' ';
+        $.get(url, function(accelData) {
+          // Now that we've completed the request schedule the next one.
+          if(accelData != null || accelData.length != 0){
+            var xarray = [];
+            var yarray = [];
+            var zarray = [];
+            var accelerationArray = [];
+            var timeArray = [];
+            for(var i = 0;i < accelData.length;i++)
+            {
+                accelerationArray.push(Math.sqrt((accelData[i].xaxis*accelData[i].xaxis) 
+                        + (accelData[i].yaxis * accelData[i].yaxis)
+                        + (accelData[i].zaxis * accelData[i].zaxis)) -9.8);
+                xarray.push(accelData[i].xaxis);
+                yarray.push(accelData[i].yaxis);
+                zarray.push(accelData[i].zaxis);
+                var myDate = new Date(accelData[i].timestamp);
+                timeArray.push(myDate.getHours()+ ":" + myDate.getMinutes() + ":"+ myDate.getSeconds() + "." + myDate.getMilliseconds());
+
+            }
+
+            var chartContainer = document.getElementById('AccelContainer');
+            AccelChart = 
+              {
+                type: 'spline',
+                renderTo: chartContainer,
+                marginRight: 10,
+                width:800,
+                height:600,
+                events: 
+                {
+                  load: function() 
+                  {
+                    // set up the updating of the chart each second
+                    var series = this.series[0];
+                    var x,y,z,time,accel;
+                    setInterval(
+                      function(){
+                        $.get("https://guarded-falls-61506.herokuapp.com/findLatest?userid=" + [[${patient.user_id}]] + "",function(data)
+                        {
+                          var x,y,z,time,accel;
+                          if(data != null)
+                          {
+                            //console.log("A Time: " + data.timestamp);
+                            var myDate = new Date(data.timestamp);
+                            time = myDate.getHours()+ ":" + myDate.getMinutes() + ":"+ myDate.getSeconds();
+                            x = data.xaxis;
+                            y = data.yaxis;
+                            z = data.zaxis;
+                            accel = Math.sqrt(x*x + y*y + z*z) - 9.8;
+                            series.addPoint([time,accel], true, true);
+                          }
+                        });
+                      }
+                    ,2000);
+                  }
+                }
+              }
+            
+            chartContainer = document.getElementById('XAxisContainer');
+            Xchart = 
+              {
+                type: 'spline',
+                renderTo: chartContainer,
+                marginRight: 10,
+                width:800,
+                height:600,
+                events: 
+                {
+                  load: function() 
+                  {
+                    // set up the updating of the chart each second
+                    var series = this.series[0];
+                    setInterval(
+                      function(){
+                        $.get("https://guarded-falls-61506.herokuapp.com/findLatest?userid=" + [[${patient.user_id}]] + "",function(data)
+                        {
+                          
+                          if(data != null)
+                          {
+                            series.addPoint([data.timestamp,data.xaxis], true, true);
+                          }
+                        });
+                      }
+                    ,2000);
+                  }
+                }
+              }
+            chartContainer = document.getElementById('YAxisContainer');
+            Ychart = 
+              {
+                type: 'spline',
+                renderTo: chartContainer,
+                marginRight: 10,
+                width:800,
+                height:600,
+                events: 
+                {
+                  load: function() 
+                  {
+                    // set up the updating of the chart each second
+                    var series = this.series[0];
+                    
+                    setInterval(
+                      function(){
+                        $.get("https://guarded-falls-61506.herokuapp.com/findLatest?userid=" + [[${patient.user_id}]] + "",function(data)
+                        {
+                          var y,time;
+                          if(data != null)
+                          {
+                            series.addPoint([data.timestamp,data.yaxis], true, true);
+                          }
+                        });
+                      }
+                    ,2000);
+                  }
+                }
+              }
+            chartContainer = document.getElementById('ZAxisContainer');
+            Zchart = 
+              {
+                type: 'spline',
+                renderTo: chartContainer,
+                marginRight: 10,
+                width:800,
+                height:600,
+                events: 
+                {
+                  load: function() 
+                  {
+                    // set up the updating of the chart every 2 seconds
+                    var series = this.series[0];
+                    setInterval(
+                      function(){
+                        $.get("https://guarded-falls-61506.herokuapp.com/findLatest?userid=" + [[${patient.user_id}]] + "",
+                          function(data)
+                          {
+                            var z,time;
+                            if(data != null)
+                            {
+                              //Push the new data onto the chart series
+                              series.addPoint([data.timestamp,data.zaxis], true, true);
+                            }
+                        });
+                      }
+                    ,2000);
+                  }
+                }
+              }
+
+            var titleAccel = {text: 'Acceleration of Device'};
+            var titleX = {text: 'X Axis Orientation of Device'};
+            var titleY = {text: 'Y Axis Orientation of Device'};
+            var titleZ = {text: 'Z Axis Orientation of Device'};
+
+            var subtitle = {text: 'Smart Phone Monitoring'};
+            var xAxis = {categories: timeArray};
+
+            var yAxisAccel = {
+                    title: {text: 'Acceleration (m/s)'},
+                    plotLines: [{value: 0,width: 1,color: '#808080'}]
+                 };
+            var yAxisX = {
+                    title: {text: 'Acceleration (m/s)'},
+                    plotLines: [{value: 0,width: 1,color: '#050400'}]
+                 };
+            var yAxisY = {
+                    title: {text: 'Acceleration (m/s)'},
+                    plotLines: [{value: 0,width: 1,color: '#5AB03B'}]
+                 };
+            var yAxisZ = {
+                    title: {text: 'Acceleration (m/s)'},
+                    plotLines: [{value: 0,width: 1,color: '#910D39'}]
+                 };
+
+
+            var tooltip = {valueSuffix: 'm/s'}
+
+            var legend = {
+                    layout: 'vertical',
+                    align: 'right',
+                    verticalAlign: 'middle',
+                    borderWidth: 0
+                 };
+
+            var Accelseries =  [{name: 'Accleration',data: accelerationArray}];
+
+            var XSeries =  [{name: 'X Axis',data: xarray}];
+            var YSeries =  [{name: 'Y Axis',data: yarray}];
+            var ZSeries =  [{name: 'Z Axis',data: zarray}];
+            var exporting = {enabled: false};
+
+            var rangeSelector = {
+              buttons: [{count: 1,type: 'minute',text: '1M'}, 
+                        {count: 5,type: 'minute',text: '5M'}, 
+                        {type: 'all',text: 'All'}],
+              inputEnabled: false,
+              selected: 0
+            }
+            var zoomType = 'xy';
+
+            var json = {};
+
+            json.title = titleAccel;
+            json.chart = AccelChart;
+            json.subtitle = subtitle;
+            json.xAxis = xAxis;
+            json.yAxis = yAxisAccel;
+            json.tooltip = tooltip;
+            json.legend = legend;
+            json.series = Accelseries;
+            json.exporting = exporting;
+            json.rangeSelector = rangeSelector;
+            json.zoomType = zoomType;
+
+            Accelchart = new Highcharts.chart(json);
+            json.series = XSeries;
+            json.chart = Xchart;
+            json.title = titleX;
+            json.yAxis = yAxisX;
+            XChart = new Highcharts.chart(json);
+            json.series = YSeries;
+            json.chart = Ychart;
+            json.title = titleY;
+            json.yAxis = yAxisY;
+            YChart = new Highcharts.chart(json);
+            json.series = ZSeries;
+            json.chart = Zchart;
+            json.title = titleZ;
+            json.yAxis = yAxisZ;
+            ZChart = new Highcharts.chart(json);
+
+          }
+
+          else
+          {
+            document.getElementById("chartContainer").html = "Error Reading Chart Data. Please refresh."; 
+            console.log("Returned null");
+          }
+          
+        });
+        
+      }); 
+
+      
+      function initMap() {
+        console.log("Init map called");
+        var location = new google.maps.LatLng(gpsRoute[0].lat,gpsRoute[0].lng);
+        var map = new google.maps.Map(document.getElementById('map'), {
+          center: location,
+          zoom: 20
+        });
+        var marker = new google.maps.Marker({
+          position: location,
+          animation: google.maps.Animation.DROP,
+          map: map
+        });
+
+        poly = new google.maps.Polyline({
+          strokeColor: '#FF0000',
+          strokeOpacity: 1.0,
+          strokeWeight: 3
+        });
+
+        var cityCircle = new google.maps.Circle({
+            strokeColor: '#0000FF',
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: '#ADD8E6',
+            fillOpacity: 0.35,
+            map: map,
+            center: location,
+            radius: 50
+          });
+
+        poly.setMap(map);
+
+        var infowindow = new google.maps.InfoWindow;
+        infowindow.setContent("Initial Position");
+        infowindow.open(map, marker);
+        mapUpdateWorker(map,infowindow,marker);
+      }
+
+      function mapUpdateWorker(map,infowindow,marker) 
+      {
+        marker.setMap(null);
+        var path = poly.getPath();
+        // Update map information
+        $.get("https://guarded-falls-61506.herokuapp.com/findLatestGPS?userid=" + [[${patient.user_id}]] +"",function(gps)
+          {
+
+            if(gps != null || gps != ""){
+              var position = { lat:gps.latitude, lng: gps.longitude};
+              //console.log(position);
+              gpsRoute.push(position);
+              marker = new google.maps.Marker({
+                position: position,
+                map:map
+              });
+              
+              path.push(new google.maps.LatLng(position.lat, position.lng));
+              infowindow.setContent("Current Position");
+              infowindow.open(map, marker);
+
+            }
+            else
+            {
+              alert("GPS data is null");
+            }
+
+        });                        
+
+        setTimeout(mapUpdateWorker, 10000,map,infowindow,marker);
+      } 
+
+      function displayEventMapAndGraph(event_id)
+      {
+        console.log(event_id);
+        var accelerationArray = [];
+        var timeArray = [];
+        var list  = [[${userEvents}]];
+        var event;
+        for(var i = 0; i < list.length; i++){
+          if(list[i].event_id == event_id){
+            event = list[i];
+            console.log(event);
+          }
+        }
+
+        var location = new google.maps.LatLng(event.location.latitude,event.location.longitude);
+        eventMap = new google.maps.Map(document.getElementById('eventMap'), {
+          center: location,
+          zoom: 17
+        });
+
+        var marker = new google.maps.Marker({
+          position: location,
+          animation: google.maps.Animation.DROP,
+          map: eventMap
+        });
+
+        var eventDate = new Date(event.timestamp);
+        var timediff;
+
+        var url = 'https://guarded-falls-61506.herokuapp.com/findall?userid=' + [[${patient.user_id}]] + ' ';
+        $.get(url, function(accelData) 
+        {
+          if(accelData != null || accelData.length != 0)
+          {
+            for(var i = 0;i < accelData.length;i++)
+            {
+              var accelDate = new Date(accelData[i].timestamp);
+              if(eventDate > accelDate){
+                timediff = eventDate - accelDate;
+              }
+              else{
+                timediff = accelDate - eventDate;
+              }
+              
+              //Gets information 10 minutes apart
+              tenMinutes = 1000 * 60 * 60 * 10;
+              
+              if(timediff < tenMinutes){
+                timeArray.push(accelDate.getHours()+ ":" + accelDate.getMinutes() 
+                  + ":"+ accelDate.getSeconds() + "." + accelDate.getMilliseconds());
+
+                accelerationArray.push(Math.sqrt((accelData[i].xaxis*accelData[i].xaxis) 
+                        + (accelData[i].yaxis * accelData[i].yaxis)
+                        + (accelData[i].zaxis * accelData[i].zaxis)) -9.8); 
+              }
+                
+            }
+
+            chartContainer = document.getElementById('EventChartContainer');
+            var EventchartOptions = 
+              {
+                type: 'spline',
+                renderTo: chartContainer,
+                marginRight: 10,
+                width:400,
+                height:400
+              }
+
+            var yAxisEvent = {
+                    title: {text: 'Acceleration (m/s)'},
+                    plotLines: [{value: 0,width: 1,color: '#808080'}]
+                 };
+          
+            var legend = {
+                    layout: 'vertical',
+                    align: 'right',
+                    verticalAlign: 'middle',
+                    borderWidth: 0
+                 };
+
+            var rangeSelector = {
+              buttons: [{count: 1,type: 'minute',text: '1M'}, 
+                        {count: 5,type: 'minute',text: '5M'}, 
+                        {type: 'all',text: 'All'}],
+              inputEnabled: false,
+              selected: 0
+            }
+
+            var chartOptions = {};
+            chartOptions.chart = EventchartOptions;
+            chartOptions.legend = legend;
+            chartOptions.yAxis = yAxisEvent;
+            chartOptions.title = {text: 'Acceleration of Device'};
+            chartOptions.subtitle = {text: 'Smart Phone Monitoring'};
+            chartOptions.xAxis = {categories: timeArray};
+            chartOptions.tooltip = {valueSuffix: 'm/s'};
+            chartOptions.series = [{name: 'Accleration',data: accelerationArray}];
+            chartOptions.exporting = {enabled: false};
+            chartOptions.rangeSelector = rangeSelector;
+
+            var EventChart = new Highcharts.chart(chartOptions);
+            $("#eventMap").show();
+            $("#EventChartContainer").show();
+          }
+        });
+      }      
+        /*]]>*/
+    </script>
+    
+  </head>
+
+  <body style="background-color: #C9DEED;">
+    <nav id="mainNav" class="navbar navbar-inverse navbar-fixed-top navbar-custom">
+      <div class="container">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                <span class="sr-only">Toggle navigation</span> Menu <i class="fa fa-bars"></i>
+            </button>
+            <a class="navbar-brand" href="#page-top">Over Here!</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav">
+                <li>
+                    <img src="https://s3-eu-west-1.amazonaws.com/overherestorage/ic_launcher.png"
+                    style="margin:1%;" height="8%" width="8%"/>
+                </li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                <li class="hidden">
+                    <a href="/"></a>
+                </li>
+                <li class="page-scroll" th:if="${user.username} != null">
+                  <a href="/logout">Logout  <span class="glyphicon glyphicon-log-in"></span></a>
+                </li>
+            </ul>
+        </div>
+      </div>
+    </nav>
+    
+    <h1></h1>
+    <div class="container">
+    <button type="button" class="btn btn-default"><a href="/">Back</a></button>
+    <center style="background-color: #eee;">
+      <h2>Patient Event Information</h2>
+      <div class="container" th:if="${#lists.isEmpty(userEvents)}">
+        <h4>No events have happened to this patient yet. Phew! <a href="#" onclick="window.location.reload(true);">Refresh to Update</a></h4>
+
+      </div>
+    </center>
+      <div th:if="${not #lists.isEmpty(userEvents)}" style="background-color: #eee;">
+        <table class="table" width="50%" >
+          <tr>
+            <th>Event Id</th>
+            <th>Event</th>
+            <th>Time</th>
+            <th>Location</th>
+          </tr>
+          <tr th:each="ue : ${userEvents}">
+            <td th:text="${ue.event_id}"></td>
+            <td th:text="${ue.event_type}">Event</td>
+            <td th:text="${ue.timestamp}">Time</td>
+            <td th:text="'GPS coordinates: ' + ${ue.location.latitude} + ',' + ${ue.location.longitude}">Location</td>
+            <td><a th:onclick="'javascript:displayEventMapAndGraph(' + ${ue.event_id} + ')'" href="#" class="btn btn-link">View Event Details</a></td>
+          </tr>
+        </table>
+        <table class="table" width="50%">
+          <tr>
+            <td><div id="eventMap" style="display:none; width:400px; height:400px;" height="100%"></div></td>
+            <td><div class="col-md-10" style="display:none;" id="EventChartContainer"></div></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="container">
+    <center>
+      <h2>Current Patient Location</h2>
+    </center>
+    <section id="GPS">
+      <center>
+        <div id="map" style="width:800px; height:600px;" height="100%"> Oops! There was an issue loading the map. Please refresh the page!</div>
+      </center>
+    </section>
+    </div>
+
+    <div class="container">
+    <center>
+      <h2>Patient Movement</h2>
+    </center>
+    </div>
+    <section id="FALL">
+      <table class="table table-inverse">
+        <tr>
+          <td><div class="col-md-10" id="AccelContainer"></div></td>
+          <td><div class="col-md-10" id="XAxisContainer"></div></td>
+        </tr>
+        <tr>
+          <td><div class="col-md-10" id="YAxisContainer"></div></td>
+          <td><div class="col-md-10" id="ZAxisContainer"></div></td>
+        </tr>
+      </table>
+    </section>
+
+    <h1></h1>
+    <!-- Footer -->
+    <footer class="text-center">
+      <div class="footer-above">
+        <div class="container">
+          <div class="row">
+            <div class="footer-col col-md-4">
+              <h3></h3>
+            </div>
+            <div class="footer-col col-md-4">
+              <h3>Over Here Patient Montioring System</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer-below">
+        <div class="container">
+          <div class="row">
+            <div class="col-lg-12">
+              Copyright &copy; Over Here! 2016
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script th:src="@{js/jquery.js}"></script>
+    <script th:src="@{js/bootstrap.min.js}"></script>
+    
+  </body>
+</html>
